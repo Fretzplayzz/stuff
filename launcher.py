@@ -162,7 +162,7 @@ class LauncherApp(tk.Tk):
 
         self.dock = tk.Frame(
             dock_shell,
-            bg="#0f172acc",
+            bg="#0f172a",
             padx=20,
             pady=16,
             highlightbackground="#475569",
@@ -194,7 +194,10 @@ class LauncherApp(tk.Tk):
         if not path:
             return
         try:
-            subprocess.Popen(path, shell=True)
+            if os.name == "nt":
+                os.startfile(path)
+            else:
+                subprocess.Popen([path])
         except OSError as exc:
             messagebox.showerror("Launch failed", f"Could not launch {app.get('name', 'app')}:\n{exc}")
 
