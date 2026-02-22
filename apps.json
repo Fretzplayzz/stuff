@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Notepad",
+    "path": "C:\\Windows\\System32\\notepad.exe",
+    "emoji": "📝"
+  },
+  {
+    "name": "Calculator",
+    "path": "C:\\Windows\\System32\\calc.exe",
+    "emoji": "🧮"
+  },
+  {
+    "name": "Paint",
+    "path": "C:\\Windows\\System32\\mspaint.exe",
+    "emoji": "🎨"
+  }
+]
