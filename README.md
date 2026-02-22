@@ -1,13 +1,14 @@
 # Aqua Launcher (Windows)
 
-A lightweight **macOS-style launcher** for Windows built with Python + Tkinter.
+A **macOS-inspired dock launcher** for Windows built with Python + Tkinter, now with a fuller GUI layout.
 
-## Features
+## What's improved
 
-- Dock-style launcher UI
-- Click app icons to open Windows apps
-- Add custom `.exe` apps from a file picker
-- Persists launcher items in `apps.json`
+- Desktop-style full window UI with top bar and hero heading
+- More dock-like icon tiles with gloss, hover zoom, and active indicator dots
+- Right-click to remove apps from the dock
+- Add app flow supports custom display name + emoji icon
+- Launcher items persist to `apps.json`
 
 ## Requirements
 
@@ -20,7 +21,8 @@ A lightweight **macOS-style launcher** for Windows built with Python + Tkinter.
 python launcher.py
 ```
 
-## Notes
+## Controls
 
-- Default apps include Notepad, Calculator, and Paint.
-- Custom added apps are saved in `apps.json`.
+- **Left click** an icon to launch the app
+- **Right click** an icon to remove it from the dock
+- **+ Add App** to choose a `.exe` and set name/icon

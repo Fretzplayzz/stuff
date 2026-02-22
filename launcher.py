@@ -3,7 +3,7 @@ import os
 import subprocess
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 
 APP_TITLE = "Aqua Launcher"
 CONFIG_FILE = Path("apps.json")
@@ -16,83 +16,178 @@ DEFAULT_APPS = [
 
 
 class DockButton(tk.Canvas):
-    def __init__(self, parent, app, launch_callback):
+    def __init__(self, parent, app, launch_callback, remove_callback):
         super().__init__(
             parent,
-            width=84,
-            height=96,
-            bg="#000000",
+            width=98,
+            height=116,
+            bg=parent.cget("bg"),
             highlightthickness=0,
             bd=0,
         )
         self.app = app
         self.launch_callback = launch_callback
-        self.circle = self.create_oval(8, 8, 76, 76, fill="#1f2937", outline="#374151", width=2)
-        self.icon = self.create_text(42, 42, text=app.get("emoji", "🚀"), fill="#ffffff", font=("Segoe UI Emoji", 24))
-        self.label = self.create_text(42, 88, text=app.get("name", "App"), fill="#d1d5db", font=("Segoe UI", 9))
+        self.remove_callback = remove_callback
+        self.hovered = False
 
-        self.bind("<Enter>", self.on_enter)
-        self.bind("<Leave>", self.on_leave)
-        self.bind("<Button-1>", self.on_click)
+        self.shadow = self.create_oval(28, 76, 70, 86, fill="#0a0a0a", outline="")
+        self.tile = self.create_oval(16, 16, 82, 82, fill="#334155", outline="#94a3b8", width=2)
+        self.gloss = self.create_arc(20, 20, 78, 62, start=0, extent=180, style="arc", outline="#dbeafe", width=2)
+        self.icon = self.create_text(49, 51, text=app.get("emoji", "🚀"), fill="#ffffff", font=("Segoe UI Emoji", 27))
+        self.indicator = self.create_oval(44, 92, 54, 102, fill="#38bdf8", outline="", state="hidden")
+        self.label = self.create_text(49, 110, text=app.get("name", "App"), fill="#cbd5e1", font=("Segoe UI", 9, "bold"))
+
+        self.bind_all_children("<Enter>", self.on_enter)
+        self.bind_all_children("<Leave>", self.on_leave)
+        self.bind_all_children("<Button-1>", self.on_click)
+        self.bind_all_children("<Button-3>", self.on_right_click)
+
+    def bind_all_children(self, event_name, callback):
+        self.bind(event_name, callback)
+        for item_id in self.find_all():
+            self.tag_bind(item_id, event_name, callback)
 
     def on_enter(self, _event):
-        self.itemconfigure(self.circle, fill="#2563eb", outline="#60a5fa")
-        self.scale("all", 42, 48, 1.08, 1.08)
+        if self.hovered:
+            return
+        self.hovered = True
+        self.itemconfigure(self.tile, fill="#2563eb", outline="#bfdbfe")
+        self.itemconfigure(self.indicator, state="normal")
+        self.itemconfigure(self.label, fill="#f8fafc")
+        self.scale("all", 49, 58, 1.1, 1.1)
 
     def on_leave(self, _event):
-        self.itemconfigure(self.circle, fill="#1f2937", outline="#374151")
-        self.scale("all", 42, 48, 1 / 1.08, 1 / 1.08)
+        if not self.hovered:
+            return
+        self.hovered = False
+        self.itemconfigure(self.tile, fill="#334155", outline="#94a3b8")
+        self.itemconfigure(self.indicator, state="hidden")
+        self.itemconfigure(self.label, fill="#cbd5e1")
+        self.scale("all", 49, 58, 1 / 1.1, 1 / 1.1)
 
     def on_click(self, _event):
         self.launch_callback(self.app)
+
+    def on_right_click(self, _event):
+        self.remove_callback(self.app)
 
 
 class LauncherApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(APP_TITLE)
-        self.geometry("760x220")
-        self.minsize(600, 200)
-        self.configure(bg="#000000")
+        self.geometry("980x420")
+        self.minsize(760, 320)
+        self.configure(bg="#020617")
 
         self.apps = self.load_apps()
+
+        self.background = tk.Canvas(self, highlightthickness=0, bd=0, bg="#020617")
+        self.background.pack(fill="both", expand=True)
+        self.background.bind("<Configure>", self.redraw_background)
+
+        self.root_layer = tk.Frame(self.background, bg="#020617")
+        self.background_window = self.background.create_window(0, 0, anchor="nw", window=self.root_layer)
+
         self.create_ui()
 
+    def redraw_background(self, event):
+        self.background.coords(self.background_window, 0, 0)
+        self.background.itemconfigure(self.background_window, width=event.width, height=event.height)
+
+        self.background.delete("bg")
+        width = event.width
+        height = event.height
+
+        bands = [
+            ("#020617", 0),
+            ("#0b1122", int(height * 0.28)),
+            ("#111827", int(height * 0.58)),
+            ("#1e293b", height),
+        ]
+        for index in range(len(bands) - 1):
+            color, start_y = bands[index]
+            _, end_y = bands[index + 1]
+            self.background.create_rectangle(0, start_y, width, end_y, fill=color, outline="", tags="bg")
+
     def create_ui(self):
-        top = tk.Frame(self, bg="#000000")
-        top.pack(fill="x", padx=16, pady=(12, 4))
+        menu = tk.Frame(self.root_layer, bg="#030712", height=32)
+        menu.pack(fill="x")
 
-        title = tk.Label(top, text=APP_TITLE, fg="#f9fafb", bg="#000000", font=("Segoe UI", 13, "bold"))
-        title.pack(side="left")
+        tk.Label(menu, text="●  ●  ●", fg="#fda4af", bg="#030712", font=("Segoe UI", 10)).pack(side="left", padx=14)
+        tk.Label(menu, text=APP_TITLE, fg="#e2e8f0", bg="#030712", font=("Segoe UI", 10, "bold")).pack(side="left")
 
-        add_button = tk.Button(
-            top,
+        actions = tk.Frame(menu, bg="#030712")
+        actions.pack(side="right", padx=12)
+
+        tk.Button(
+            actions,
             text="+ Add App",
-            bg="#1f2937",
-            fg="#f9fafb",
-            activebackground="#374151",
-            activeforeground="#f9fafb",
-            relief="flat",
-            padx=12,
             command=self.add_app,
+            relief="flat",
+            bd=0,
+            padx=12,
+            pady=4,
+            bg="#1d4ed8",
+            fg="#ffffff",
+            activebackground="#2563eb",
+            activeforeground="#ffffff",
+            cursor="hand2",
+            font=("Segoe UI", 9, "bold"),
+        ).pack(side="right")
+
+        headline = tk.Frame(self.root_layer, bg="#020617")
+        headline.pack(fill="x", pady=(18, 0))
+
+        tk.Label(
+            headline,
+            text="Launch your apps like a Mac dock",
+            bg="#020617",
+            fg="#f8fafc",
+            font=("Segoe UI", 24, "bold"),
+        ).pack()
+        tk.Label(
+            headline,
+            text="Click to open • Right-click to remove",
+            bg="#020617",
+            fg="#94a3b8",
+            font=("Segoe UI", 11),
+        ).pack(pady=(6, 0))
+
+        dock_shell = tk.Frame(self.root_layer, bg="#020617")
+        dock_shell.pack(fill="both", expand=True, pady=24)
+
+        self.dock_shadow = tk.Frame(dock_shell, bg="#020202", height=126)
+        self.dock_shadow.place(relx=0.5, rely=0.52, anchor="center", relwidth=0.88)
+
+        self.dock = tk.Frame(
+            dock_shell,
+            bg="#0f172acc",
+            padx=20,
+            pady=16,
+            highlightbackground="#475569",
+            highlightthickness=1,
         )
-        add_button.pack(side="right")
+        self.dock.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.86)
 
-        dock_shell = tk.Frame(self, bg="#000000")
-        dock_shell.pack(fill="both", expand=True, padx=16, pady=8)
-
-        self.dock = tk.Frame(dock_shell, bg="#111827", padx=16, pady=12)
-        self.dock.place(relx=0.5, rely=0.5, anchor="center")
+        footer = tk.Label(
+            self.root_layer,
+            text="Tip: Right-click any icon to remove it from the dock.",
+            bg="#020617",
+            fg="#64748b",
+            font=("Segoe UI", 9),
+        )
+        footer.pack(pady=(0, 16))
 
         self.render_apps()
 
     def render_apps(self):
-        for w in self.dock.winfo_children():
-            w.destroy()
+        for widget in self.dock.winfo_children():
+            widget.destroy()
 
         for app in self.apps:
-            button = DockButton(self.dock, app, self.launch_app)
-            button.pack(side="left", padx=8)
+            button = DockButton(self.dock, app, self.launch_app, self.remove_app)
+            button.pack(side="left", padx=6)
 
     def launch_app(self, app):
         path = app.get("path", "")
@@ -111,9 +206,28 @@ class LauncherApp(tk.Tk):
         if not selected:
             return
 
-        name = os.path.splitext(os.path.basename(selected))[0]
-        new_app = {"name": name, "path": selected, "emoji": "⚡"}
+        default_name = os.path.splitext(os.path.basename(selected))[0]
+        name = simpledialog.askstring("App name", "Display name for this app:", initialvalue=default_name)
+        if not name:
+            name = default_name
+
+        emoji = simpledialog.askstring("Icon", "Enter an emoji for the dock icon:", initialvalue="⚡")
+        if not emoji:
+            emoji = "⚡"
+
+        new_app = {"name": name.strip() or default_name, "path": selected, "emoji": emoji.strip()[:2]}
         self.apps.append(new_app)
+        self.save_apps()
+        self.render_apps()
+
+    def remove_app(self, app):
+        if app not in self.apps:
+            return
+        confirmed = messagebox.askyesno("Remove app", f"Remove '{app.get('name', 'App')}' from the dock?")
+        if not confirmed:
+            return
+
+        self.apps.remove(app)
         self.save_apps()
         self.render_apps()
 
